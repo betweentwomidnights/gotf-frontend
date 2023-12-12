@@ -2,7 +2,7 @@ this is the github for a chrome browser extension temporarily called 'gary on th
 
 audiocraft continuations based on the youtube/soundcloud url the user is at when they click the 'generate music' button in the Popup window.
 
-big time work in process.
+big time work in progress.
 
 TODO: 
 

@@ -1,3 +1,43 @@
+this is the github for a chrome browser extension temporarily called 'gary on the fly'
+
+audiocraft continuations based on the youtube/soundcloud url the user is at when they click the 'generate music' button in the Popup window.
+
+big time work in process.
+
+TODO: 
+
+create an array to store the past 5 generations.
+
+fix the context issues so that the Popup window can close during the generation process. 
+
+Currently, the user has to keep the popup window open or else they never receive the audio file, and have to start over.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 <div align="center">
 <img src="public/icon-128.png" alt="logo"/>
 <h1> Chrome Extension Boilerplate with<br/>React + Vite + TypeScript</h1>

@@ -7,21 +7,23 @@ import useStorage from '@src/shared/hooks/useStorage';
 import exampleThemeStorage from '@src/shared/storages/exampleThemeStorage';
 import withSuspense from '@src/shared/hoc/withSuspense';
 import withErrorBoundary from '@src/shared/hoc/withErrorBoundary';
+import { Collapse } from "@chakra-ui/react";
 
 const Newtab = () => {
   const { state, updateState } = useContext(MyContext);
-  const { audioData } = state;
+  const { audioDataArray } = state;
   const theme = useStorage(exampleThemeStorage);
+  const [showOlderGenerations, setShowOlderGenerations] = useState(false);
 
-  // Load audioData from chrome.storage.local when component mounts
+  // Load audioDataArray from chrome.storage.local when component mounts
   useEffect(() => {
-    chrome.storage.local.get(['audioData'], function(result) {
-      if (result.audioData) {
-        // Update the state with the retrieved audio data
-        updateState({ audioData: result.audioData });
+    chrome.storage.local.get(['audioDataArray'], function(result) {
+      if (result.audioDataArray) {
+        // Update the state with the retrieved array of audio data
+        updateState({ audioDataArray: result.audioDataArray });
       }
     });
-  }, []);
+  }, [updateState]);
 
   return (
     <div
@@ -35,11 +37,24 @@ const Newtab = () => {
           Please navigate to a YouTube URL to use the Popup. 
           Warning: Leave the Popup open during generation to receive the audio.
         </p>
-        {audioData && (
-          <audio controls src={`data:audio/wav;base64,${audioData}`}>
+        {/* Display the most recent generation */}
+        {audioDataArray && audioDataArray.length > 0 && (
+          <audio controls src={`data:audio/wav;base64,${audioDataArray[0]}`}>
             <track kind="captions" />
           </audio>
         )}
+        {/* Button to show/hide older generations */}
+        <button onClick={() => setShowOlderGenerations(!showOlderGenerations)}>
+          {showOlderGenerations ? 'Hide' : 'Show'} older generations
+        </button>
+        {/* Collapse component to toggle visibility of older generations */}
+        <Collapse in={showOlderGenerations}>
+          {audioDataArray && audioDataArray.slice(1).map((audioData, index) => (
+            <audio key={index} controls src={`data:audio/wav;base64,${audioData}`}>
+              <track kind="captions" />
+            </audio>
+          ))}
+        </Collapse>
         <button
           style={{
             backgroundColor: theme === 'light' ? '#fff' : '#000',

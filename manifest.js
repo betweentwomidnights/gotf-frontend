@@ -13,6 +13,8 @@ const manifest = {
         'storage',
         'sidePanel',
         'activeTab',  // Add this line
+        'tabs',
+        'scripting'
     ],
   side_panel: {
     default_path: 'src/pages/sidepanel/index.html',
@@ -34,10 +36,11 @@ const manifest = {
   },
   content_scripts: [
     {
-      matches: ['http://*/*', 'https://*/*', '<all_urls>'],
+      matches: ["*://*.youtube.com/*"],
       js: ['src/pages/content/index.js'],
       // KEY for cache invalidation
       css: ['assets/css/contentStyle<KEY>.chunk.css'],
+      "run_at": "document_idle"
     },
   ],
   devtools_page: 'src/pages/devtools/index.html',

@@ -7,13 +7,13 @@ console.log('background loaded');
 
 let audioDataArray: string[] = [];
 
-async function generateMusic(url: string, timestamp: number) {
+async function generateMusic(url: string) {
   console.log(`Generating music for URL: ${url}`);
   try {
     const response = await fetch('http://localhost:5000/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, timestamp }),
+      body: JSON.stringify({ url }),
     });
 
     console.log('Fetch response received');
@@ -46,7 +46,7 @@ async function generateMusic(url: string, timestamp: number) {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log(`Received message: ${request.action}`);
   if (request.action === 'generateMusic') {
-    generateMusic(request.url, request.timestamp).then(audio => {
+    generateMusic(request.url).then(audio => {
       if (audio) {
         sendResponse({ audio, audioDataArray });
         console.log('Sending audio data back to sender');

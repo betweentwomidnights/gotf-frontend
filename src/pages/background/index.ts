@@ -1,22 +1,28 @@
+// Background Script
+
 import 'webextension-polyfill';
 import reloadOnUpdate from 'virtual:reload-on-update-in-background-script';
 
 reloadOnUpdate('pages/background');
-
 console.log('background loaded');
 
-let audioDataArray: string[] = [];
+let audioDataArray = []; // Initialize the audio data array
 
-async function generateMusic(url: string, timestamp: number) {
+async function generateMusic(url, currentTime) {
   console.log(`Generating music for URL: ${url}`);
   try {
-    const response = await fetch('http://localhost:5000/generate', {
+    const response = await fetch('http://localhost:8000/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, timestamp }),
+      body: JSON.stringify({ url, currentTime }),
     });
 
-    console.log('Fetch response received');
+    // After saving the audio data to local storage
+    chrome.storage.local.set({ audioDataArray }, () => {
+      console.log('Audio data saved to local storage.');
+      chrome.runtime.sendMessage({ action: 'audioUpdated' });
+      chrome.runtime.sendMessage({ action: 'generationCompleted' }); // Broadcast that generation has completed
+    });
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -25,42 +31,28 @@ async function generateMusic(url: string, timestamp: number) {
     const data = await response.json();
     if (data.audio) {
       console.log('Audio data received:', data.audio);
-      audioDataArray.unshift(data.audio);
-      if (audioDataArray.length > 5) {
-        audioDataArray = audioDataArray.slice(0, 5);
-      }
+      audioDataArray = [data.audio, ...audioDataArray.slice(0, 4)]; // Update the audio data array
       chrome.storage.local.set({ audioDataArray }, () => {
-        console.log('Audio data array updated in storage:', audioDataArray);
+        console.log('Audio data saved to local storage.');
+        // Broadcast the update to all components
+        chrome.runtime.sendMessage({ action: 'audioUpdated' });
       });
-      return data.audio;
     } else if (data.error) {
       console.error('Error generating music:', data.error);
-      return null;
     }
   } catch (error) {
     console.error('Error generating music:', error);
-    return null;
+    chrome.runtime.sendMessage({ action: 'generationFailed' }); // Broadcast that generation has failed
   }
 }
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  console.log(`Received message: ${request.action}`);
-  if (request.action === 'generateMusic') {
-    generateMusic(request.url, request.timestamp).then(audio => {
-      if (audio) {
-        sendResponse({ audio, audioDataArray });
-        console.log('Sending audio data back to sender');
-      } else {
-        sendResponse({ error: 'Failed to generate music' });
-        console.error('Sending error back to sender');
-      }
-    });
-    return true;
-  } else if (request.action === 'getAudioDataArray') {
-    chrome.storage.local.get(['audioDataArray'], (result) => {
-      sendResponse({ audioDataArray: result.audioDataArray || [] });
-      console.log('Sending audioDataArray back to sender:', result.audioDataArray);
-    });
-    return true;
+  if (request.action === "generateMusic") {
+    generateMusic(request.url, request.currentTime);
+    sendResponse({ status: 'Music generation initiated' });
+  } else if (request.action === "getAudioDataArray") {
+    // Respond with the current audio data array
+    sendResponse({ audioDataArray });
   }
+  return true;
 });

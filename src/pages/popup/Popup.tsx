@@ -21,43 +21,55 @@ const Popup = () => {
             const url = tabs[0]?.url || '';
             updateState({ currentURL: url, supported: isSupportedURL(url) });
         });
+
+         // Add listener for messages from the background script
+        const messageListener = (message, sender, sendResponse) => {
+            if (message.action === 'audioUpdated') {
+                chrome.storage.local.get(['audioDataArray'], (result) => {
+                    updateState({ audioDataArray: result.audioDataArray, loading: false });
+                });
+            } else if (message.action === 'generationStarted') {
+                updateState({ loading: true });
+            } else if (message.action === 'generationCompleted') {
+                updateState({ loading: false });
+            }
+        };
+
+        chrome.runtime.onMessage.addListener(messageListener);
+        
+        // Cleanup listener on unmount
+        return () => {
+            chrome.runtime.onMessage.removeListener(messageListener);
+        };
     }, []);
 
     const handleMusicGeneration = async () => {
         if (loading) return;
         updateState({ loading: true });
-    
+
         chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
             const tabId = tabs[0]?.id;
             if (!tabId) return;
-    
+
             chrome.tabs.sendMessage(tabId, { action: "getVideoTime" }, async (videoResponse) => {
                 if (videoResponse?.currentTime !== undefined) {
-                    try {
-                        const response = await fetch('http://localhost:5000/generate', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ url: currentURL, currentTime: videoResponse.currentTime }),
+                    chrome.runtime.sendMessage({
+                        action: 'generateMusic',
+                        url: currentURL,
+                        currentTime: videoResponse.currentTime
+                    }, response => {
+                        console.log(response.status);
+                    });
+
+                    // Poll for audio data
+                    const pollForAudioData = setInterval(() => {
+                        chrome.storage.local.get(['audioDataArray'], (result) => {
+                            if (result.audioDataArray && result.audioDataArray.length > 0) {
+                                clearInterval(pollForAudioData);
+                                updateState({ audioDataArray: result.audioDataArray, loading: false });
+                            }
                         });
-    
-                        if (!response.ok) {
-                            throw new Error(`HTTP error! status: ${response.status}`);
-                        }
-                        const data = await response.json();
-                        if (data.audio) {
-                            const newAudioDataArray = [data.audio, ...audioDataArray.slice(0, 4)];
-                            chrome.storage.local.set({ audioDataArray: newAudioDataArray }, () => {
-                                console.log('Audio data saved to local storage.');
-                                updateState({ audioDataArray: newAudioDataArray, loading: false });
-                            });
-                        } else if (data.error) {
-                            console.error('Error generating music:', data.error);
-                            updateState({ loading: false });
-                        }
-                    } catch (error) {
-                        console.error('Error generating music:', error);
-                        updateState({ loading: false });
-                    }
+                    }, 2000); // Poll every 2 seconds
                 } else {
                     console.error('Error retrieving video time.');
                     updateState({ loading: false });

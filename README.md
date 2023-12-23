@@ -6,11 +6,15 @@ big time work in progress.
 
 TODO: 
 
-create an array to store the past 5 generations.
+fix the bug where the popup window loads previous waveforms into the newtab's timeline even if you have removed them. doesn't always happen.
 
-fix the context issues so that the Popup window can close during the generation process. 
+work on options tab for fine-tunes, params etc.
 
-Currently, the user has to keep the popup window open or else they never receive the audio file, and have to start over.
+clean up the state management even better.
+
+export-to-mp3 from the timeline.
+
+cursor synchronization on the wavesurfer instances.
 
 
 

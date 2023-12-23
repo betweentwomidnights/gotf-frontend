@@ -21,6 +21,7 @@
     justify-content: center;
     font-size: calc(10px + 2vmin);
     color: white;
+    width: 100%; /* Ensure the header takes full width */
 }
 
 .App-link {
@@ -34,4 +35,100 @@
     to {
         transform: rotate(360deg);
     }
+}
+
+/* Timeline.css */
+
+.timeline-container {
+    margin: 20px auto;
+    padding: 10px;
+    max-width: 1200px;
+    width: 80%
+}
+
+.main-timeline {
+    border: 2px dashed #ccc;
+    height: 150px;
+    // Adjust as needed margin-bottom: 20px;
+    position: relative;
+    overflow-x: auto; /* Enable horizontal scrolling */
+    overflow-y: hidden; /* Hide vertical scrollbar */
+    white-space: nowrap; /* Prevent wrapping of inline elements */
+    position: relative; /* Position relative to its normal position */
+}
+
+.time-marker {
+    position: absolute; /* Position absolutely within the .main-timeline */
+    height: 100%;
+    border-left: 1px solid #ccc; /* A line to represent the marker */
+    /* ... other styles as needed ... */
+}
+
+.audio-item-in-timeline {
+    width: 100%; /* Or any specific width */
+    /* Other styles */
+}
+
+.timeline-placeholder {
+    width: 100%;
+    height: 100%;
+    line-height: 150px;
+    // To vertically center text text-align: center;
+    color: #ccc;
+}
+
+.export-mp3-button {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+}
+
+.audio-list-container {
+    display: flex;
+    justify-content: center; /* Center the child container */
+}
+
+.audio-list {
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    max-height: 180px; /* Adjust based on your design */
+    width: calc(100% - 12px); /* Assuming scrollbar width to be 12px */
+    margin-right: -12px; /* Offset the scrollbar width */
+    scrollbar-width: thin; /* For Firefox */
+    scrollbar-color: #888 #333; /* For Firefox */
+    direction: rtl;
+}
+
+    .audio-list::-webkit-scrollbar {
+        width: 12px;
+    }
+
+    .audio-list::-webkit-scrollbar-track {
+        background: #333;
+    }
+
+    .audio-list::-webkit-scrollbar-thumb {
+        background-color: #888;
+        border-radius: 6px;
+        border: 3px solid #333;
+    }
+
+.audio-item {
+    margin: 10px 0;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    width: 100%;
+    direction: ltr; /* Left-to-right direction for individual items */
+    position: center;
+}
+
+.waveform-container {
+    width: 100%;
+    height: auto;
+    // Adjust as needed margin: auto;
+    background-color: #000000;
 }

@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useEffect } from 'react';
 import { MyContext } from './Context';
 import logo from '@assets/img/gotf-logo.png';
 import '@pages/popup/Popup.css';
@@ -22,7 +22,7 @@ const Popup = () => {
             updateState({ currentURL: url, supported: isSupportedURL(url) });
         });
 
-         // Add listener for messages from the background script
+        // Add listener for messages from the background script
         const messageListener = (message, sender, sendResponse) => {
             if (message.action === 'audioUpdated') {
                 chrome.storage.local.get(['audioDataArray'], (result) => {
@@ -36,7 +36,7 @@ const Popup = () => {
         };
 
         chrome.runtime.onMessage.addListener(messageListener);
-        
+
         // Cleanup listener on unmount
         return () => {
             chrome.runtime.onMessage.removeListener(messageListener);
@@ -97,7 +97,7 @@ const Popup = () => {
                     <p>Please navigate to a YouTube or SoundCloud page to use this extension.</p>
                 )}
                 {audioDataArray && audioDataArray.length > 0 && (
-                    <audio controls src={`data:audio/wav;base64,${audioDataArray[0]}`}>
+                    <audio controls src={`data:audio/wav;base64,${audioDataArray[0].data}`}>
                         <track kind="captions" />
                     </audio>
                 )}

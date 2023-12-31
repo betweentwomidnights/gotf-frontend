@@ -6,21 +6,38 @@ big time work in progress.
 
 TODO: 
 
-the options tab for control of parameters like length of generation
+fix the bug where the popup window loads previous waveforms into the newtab's timeline even if you have removed them. doesn't always happen.
 
-the addition of bpm detection and 'lego-block' feature (occurs on backend too), so that the user can arrange the outputs like jigsaw puzzles in the newtab component
+work on options tab for fine-tunes, params etc.
 
-even better state management. maybe figure out how to properly use valtio's useExtensionState hook (updateState()) across components
+clean up the state management even better.
 
-all help is welcome
+export-to-mp3 from the timeline.
 
-https://twitter.com/@thepatch_kev
-
-https://youtube.com/
+cursor synchronization on the wavesurfer instances.
 
 
 
-We began with this boilerplate:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

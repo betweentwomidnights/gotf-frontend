@@ -6,34 +6,21 @@ big time work in progress.
 
 TODO: 
 
-create an array to store the past 5 generations.
+the options tab for control of parameters like length of generation
 
-fix the context issues so that the Popup window can close during the generation process. 
+the addition of bpm detection and 'lego-block' feature (occurs on backend too), so that the user can arrange the outputs like jigsaw puzzles in the newtab component
 
-Currently, the user has to keep the popup window open or else they never receive the audio file, and have to start over.
+even better state management. maybe figure out how to properly use valtio's useExtensionState hook (updateState()) across components
 
+all help is welcome
 
+https://twitter.com/@thepatch_kev
 
-
-
-
-
-
+https://youtube.com/
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
+We began with this boilerplate:
 
 
 

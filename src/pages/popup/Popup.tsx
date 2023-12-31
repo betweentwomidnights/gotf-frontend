@@ -1,4 +1,4 @@
-import React, { useContext, useEffect } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { MyContext } from './Context';
 import logo from '@assets/img/gotf-logo.png';
 import '@pages/popup/Popup.css';
@@ -7,14 +7,25 @@ import exampleThemeStorage from '@src/shared/storages/exampleThemeStorage';
 import withSuspense from '@src/shared/hoc/withSuspense';
 import withErrorBoundary from '@src/shared/hoc/withErrorBoundary';
 import { attachTwindStyle } from '@src/shared/style/twind';
-import { Button } from "@chakra-ui/react";
+import { Button, IconButton, useDisclosure, Flex } from "@chakra-ui/react";
+import { SettingsIcon } from "@chakra-ui/icons";
 import { isSupportedURL } from './urlChecker';
+import SettingsModal from './Settings';
+
 
 const Popup = () => {
     const { state, updateState } = useContext(MyContext);
     const { currentURL, supported, loading, audioDataArray } = state;
     const theme = useStorage(exampleThemeStorage);
-    const appContainer = document.getElementById('app');
+    const { isOpen, onToggle } = useDisclosure(); // onToggle will toggle the isOpen state
+    const buttonTextColor = theme === 'light' ? 'black' : 'white';
+    const buttonBgColor = theme === 'light' ? 'gray.200' : 'gray.700'; // Use the colors you want for light and dark themes
+    const [popupHeight, setPopupHeight] = useState('auto');
+
+    // Additional state for settings
+    const [model, setModel] = useState('facebook/musicgen-small');
+    const [promptLength, setPromptLength] = useState('6');
+    const [duration, setDuration] = useState('16-18');
 
     useEffect(() => {
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -22,22 +33,21 @@ const Popup = () => {
             updateState({ currentURL: url, supported: isSupportedURL(url) });
         });
 
-        // Add listener for messages from the background script
+        // Synchronize loading state on popup open
+        chrome.storage.local.get(['audioDataArray', 'loading'], (result) => {
+            updateState({ audioDataArray: result.audioDataArray, loading: result.loading });
+        });
+
         const messageListener = (message, sender, sendResponse) => {
             if (message.action === 'audioUpdated') {
                 chrome.storage.local.get(['audioDataArray'], (result) => {
                     updateState({ audioDataArray: result.audioDataArray, loading: false });
                 });
-            } else if (message.action === 'generationStarted') {
-                updateState({ loading: true });
-            } else if (message.action === 'generationCompleted') {
-                updateState({ loading: false });
             }
         };
 
         chrome.runtime.onMessage.addListener(messageListener);
 
-        // Cleanup listener on unmount
         return () => {
             chrome.runtime.onMessage.removeListener(messageListener);
         };
@@ -46,48 +56,69 @@ const Popup = () => {
     const handleMusicGeneration = async () => {
         if (loading) return;
         updateState({ loading: true });
-
+    
         chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
             const tabId = tabs[0]?.id;
             if (!tabId) return;
-
+    
             chrome.tabs.sendMessage(tabId, { action: "getVideoTime" }, async (videoResponse) => {
                 if (videoResponse?.currentTime !== undefined) {
                     chrome.runtime.sendMessage({
                         action: 'generateMusic',
                         url: currentURL,
-                        currentTime: videoResponse.currentTime
+                        currentTime: videoResponse.currentTime,
+                        model, // new setting
+            promptLength, // new setting
+            duration // new setting
                     }, response => {
-                        console.log(response.status);
+                        // Check if response is defined before accessing its properties
+                        if (response && response.status) {
+                            console.log(response.status);
+                        } else {
+                            console.error('Error: Response is undefined');
+                            updateState({ loading: false });
+                        }
                     });
-
-                    // Poll for audio data
-                    const pollForAudioData = setInterval(() => {
-                        chrome.storage.local.get(['audioDataArray'], (result) => {
-                            if (result.audioDataArray && result.audioDataArray.length > 0) {
-                                clearInterval(pollForAudioData);
-                                updateState({ audioDataArray: result.audioDataArray, loading: false });
-                            }
-                        });
-                    }, 2000); // Poll every 2 seconds
                 } else {
-                    console.error('Error retrieving video time.');
-                    updateState({ loading: false });
-                }
+                    // Update the state with an error message
+                    updateState({ errorMessage: 'Please refresh the YouTube page to continue.' });
+                  }
             });
         });
     };
     
 
     useEffect(() => {
+        const appContainer = document.getElementById('app');
         if (appContainer) {
             attachTwindStyle(appContainer, document);
         }
     }, []);
 
+    useEffect(() => {
+        const updatePopupHeight = () => {
+            if (isOpen) {
+                // Query the modal content and assert it as an HTMLElement
+                const modalContent = document.querySelector('.modal-content-class') as HTMLElement | null; // Replace '.modal-content-class' with your modal's class or ID
+    
+                if (modalContent) {
+                    // Set the height based on the modal content's offsetHeight
+                    setPopupHeight(`${modalContent.offsetHeight}px`);
+                }
+            } else {
+                // Reset height when modal is closed
+                setPopupHeight('auto');
+            }
+        };
+    
+        updatePopupHeight();
+    
+        // Re-calculate when isOpen changes
+    }, [isOpen]);
+
     return (
-        <div className="App" style={{ backgroundColor: theme === 'light' ? '#fff' : '#000' }}>
-            <header className="App-header" style={{ color: theme === 'light' ? '#000' : '#fff' }}>
+        <div className="App" style={{ backgroundColor: theme === 'light' ? '#fff' : '#000', position: 'relative', height: popupHeight, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <header className="App-header" style={{ color: theme === 'light' ? '#000' : '#fff', padding: '1rem' }}>
                 <img src={logo} className="App-logo" alt="logo" />
                 {supported ? (
                     <Button colorScheme="teal" onClick={handleMusicGeneration} isLoading={loading} isDisabled={loading}>
@@ -101,12 +132,58 @@ const Popup = () => {
                         <track kind="captions" />
                     </audio>
                 )}
-                <Button colorScheme="teal" onClick={exampleThemeStorage.toggle}>
-                    Toggle theme
-                </Button>
+                {state.errorMessage && (
+                    <div className="error-message">{state.errorMessage}</div>
+                )}
             </header>
+      
+           {/* Bottom Buttons Container */}
+      <Flex
+        position="relative"
+        bottom="10px"
+        left="0"
+        right="0"
+        px="10px"
+        justifyContent="space-between"
+        alignItems="center"
+        color={theme === 'light' ? '#000' : '#fff'} // Apply conditional background color
+      >
+        {/* Theme Toggle Button */}
+        <Button
+          onClick={exampleThemeStorage.toggle}
+          colorScheme={theme === 'light' ? '#fff' : '#000'} // Use your defined color schemes for light and dark themes
+          mr="auto" // Pushes this button to the left
+        >
+          Toggle theme
+        </Button>
+
+        {/* Settings Button */}
+        <IconButton
+          aria-label="Settings"
+          icon={<SettingsIcon />}
+          onClick={onToggle}
+          variant="ghost"
+          color={theme === 'light' ? 'black' : 'white'} // Apply conditional text color
+          bg={theme === 'light' ? 'gray.200' : 'gray.700'} // Apply conditional background color
+          ml="auto" // Pushes this button to the right
+        />
+      </Flex>
+
+            {/* Chakra UI Modal for settings */}
+            <SettingsModal 
+            isOpen={isOpen}
+            onClose={onToggle}
+            theme={theme}
+            model={model}
+            setModel={setModel}
+            promptLength={promptLength}
+            setPromptLength={setPromptLength}
+            duration={duration}
+            setDuration={setDuration}
+        />
         </div>
     );
 };
+
 
 export default withErrorBoundary(withSuspense(Popup, <div>Loading...</div>), <div>Error Occur</div>);

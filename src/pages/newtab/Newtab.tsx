@@ -11,14 +11,12 @@ import Timeline from './Timeline';
 
 const Newtab = () => {
     const theme = useStorage(exampleThemeStorage);
-    const [audioDataArray, setAudioDataArray] = useState<{ id: string, data: string }[]>([]);
+    const [audioDataArray, setAudioDataArray] = useState<{ taskId: string, data: string }[]>([]);
     const [showOlderGenerations, setShowOlderGenerations] = useState(false);
 
     useEffect(() => {
-        // Fetch existing audio data from storage
         chrome.storage.local.get(['audioDataArray'], (result) => {
             if (result.audioDataArray) {
-                // Assuming each piece of audio data already has an ID
                 setAudioDataArray(result.audioDataArray);
             }
         });
@@ -67,7 +65,7 @@ const Newtab = () => {
                 </button>
                 <Collapse in={showOlderGenerations}>
                     {audioDataArray.slice(1).map((audioData) => (
-                        <audio key={audioData.id} controls src={`data:audio/wav;base64,${audioData.data}`}>
+                        <audio key={audioData.taskId} controls src={`data:audio/wav;base64,${audioData.data}`}>
                             <track kind="captions" />
                         </audio>
                     ))}

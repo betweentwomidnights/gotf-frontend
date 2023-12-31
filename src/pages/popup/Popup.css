@@ -7,7 +7,7 @@
   text-align: center;
   height: 100%;
   padding: 10px;
-  background-color: #282c34;
+  background-color: #ffffff;
 }
 
 .App-logo {
@@ -25,10 +25,10 @@
   height: 100%;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+  position: relative; /* This ensures absolute positioning is relative to the App-header */
+  padding-bottom: 50px; /* Give some space at the bottom for the buttons */
 }
 
 .App-link {
@@ -42,4 +42,25 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+/* Additional container for buttons */
+.buttons-container {
+  position: absolute;
+  bottom: 10px;
+  left: 10px; /* Ensure this matches the padding of the App for alignment */
+  right: 10px; /* Ensure this matches the padding of the App for alignment */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%; /* Ensure full width */
+}
+
+/* You might not need these styles if using Chakra UI as it handles positioning */
+.settings-button {
+  margin-left: auto; /* This pushes the settings button to the right */
+}
+
+.theme-toggle-button {
+  /* This is now handled by the buttons-container */
 }

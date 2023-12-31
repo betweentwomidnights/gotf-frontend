@@ -15,7 +15,7 @@
     width: 300px; /* Adjust based on your needs */
     height: auto;
     margin-bottom: 4px; /* Adjust as needed, replace mb-4 from JSX */
-    background-color: #000000;
+    
     border-radius: 8px;
     cursor: grab;
 }

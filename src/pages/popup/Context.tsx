@@ -6,8 +6,9 @@ export const MyContext = createContext({
     currentURL: '',
     supported: false,
     loading: false,
-    audioDataArray: [], // Changed to an array to hold past generations
+    audioDataArray: [],
     taskId: null,
+    errorMessage: ''
   },
   updateState: (newState) => {},
 });
@@ -17,8 +18,9 @@ export const MyProvider = ({ children }) => {
     currentURL: '',
     supported: false,
     loading: false,
-    audioDataArray: [], // Initialize as an empty array
+    audioDataArray: [],
     taskId: null,
+    errorMessage: ''
   });
 
   const updateState = (newState) => {
@@ -26,24 +28,31 @@ export const MyProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    // Update the supported flag based on the URL
+    // Update the supported flag and load audioDataArray from chrome.storage.local
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const url = tabs[0]?.url || '';
       updateState({ currentURL: url, supported: isSupportedURL(url) });
     });
 
-    // Load the audioDataArray from chrome.storage.local when component mounts
+    // Listener for storage changes
+    const handleStorageChange = (changes, area) => {
+      if (area === 'local' && changes.audioDataArray) {
+        updateState({ audioDataArray: changes.audioDataArray.newValue });
+      }
+    };
+
     chrome.storage.local.get(['audioDataArray'], function(result) {
       if (result.audioDataArray) {
         updateState({ audioDataArray: result.audioDataArray });
       }
     });
-  }, []);
 
-  // Save the audioDataArray to chrome.storage.local whenever it updates
-  useEffect(() => {
-    chrome.storage.local.set({ audioDataArray: state.audioDataArray });
-  }, [state.audioDataArray]);
+    chrome.storage.onChanged.addListener(handleStorageChange);
+
+    return () => {
+      chrome.storage.onChanged.removeListener(handleStorageChange);
+    };
+  }, []);
 
   // Provide state and updateState through context
   const contextValue = {

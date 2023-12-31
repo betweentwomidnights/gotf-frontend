@@ -4,6 +4,8 @@ import Newtab from '@pages/newtab/Newtab';
 import '@pages/newtab/index.css';
 import refreshOnUpdate from 'virtual:reload-on-update-in-view';
 import { MyProvider } from '../popup/Context'; // Ensure correct path to Context
+import CustomChakraProvider from '@pages/content/ui/CustomChakraProvider';
+import EmotionCacheProvider from '@pages/content/ui/EmotionCacheProvider';
 
 refreshOnUpdate('pages/newtab');
 
@@ -16,7 +18,9 @@ function init() {
 
   root.render(
     <MyProvider>
+      <CustomChakraProvider shadowRootId={appContainer.id}>
       <Newtab />
+      </CustomChakraProvider>
     </MyProvider>
   );
 }

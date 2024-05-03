@@ -18,8 +18,6 @@ const Popup = () => {
     const { currentURL, supported, loading, audioDataArray } = state;
     const theme = useStorage(exampleThemeStorage);
     const { isOpen, onToggle } = useDisclosure(); // onToggle will toggle the isOpen state
-    const buttonTextColor = theme === 'light' ? 'black' : 'white';
-    const buttonBgColor = theme === 'light' ? 'gray.200' : 'gray.700'; // Use the colors you want for light and dark themes
     const [popupHeight, setPopupHeight] = useState('auto');
 
     // Additional state for settings
@@ -30,23 +28,30 @@ const Popup = () => {
     useEffect(() => {
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
             const url = tabs[0]?.url || '';
-            updateState({ currentURL: url, supported: isSupportedURL(url) });
+            const isPlaylist = new URL(url).searchParams.has('list');
+            if (isPlaylist) {
+                // Handle playlist URL
+                // Extract video ID and construct individual video URL
+                const videoID = new URL(url).searchParams.get('v');
+                const individualURL = `https://www.youtube.com/watch?v=${videoID}`;
+                updateState({ currentURL: individualURL, supported: isSupportedURL(individualURL) });
+            } else {
+                updateState({ currentURL: url, supported: isSupportedURL(url) });
+            }
         });
 
-        // Synchronize loading state on popup open
-        chrome.storage.local.get(['audioDataArray', 'loading'], (result) => {
-            updateState({ audioDataArray: result.audioDataArray, loading: result.loading });
-        });
+        const fetchAudioData = () => {
+            chrome.runtime.sendMessage({ action: "getAudioDataArray" });
+        };
 
         const messageListener = (message, sender, sendResponse) => {
             if (message.action === 'audioUpdated') {
-                chrome.storage.local.get(['audioDataArray'], (result) => {
-                    updateState({ audioDataArray: result.audioDataArray, loading: false });
-                });
+                updateState({ audioDataArray: message.audioDataArray, loading: false });
             }
         };
 
         chrome.runtime.onMessage.addListener(messageListener);
+        fetchAudioData(); // Fetch audio data on component mount
 
         return () => {
             chrome.runtime.onMessage.removeListener(messageListener);

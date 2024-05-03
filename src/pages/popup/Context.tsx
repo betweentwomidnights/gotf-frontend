@@ -28,29 +28,34 @@ export const MyProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    // Update the supported flag and load audioDataArray from chrome.storage.local
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const url = tabs[0]?.url || '';
       updateState({ currentURL: url, supported: isSupportedURL(url) });
     });
 
-    // Listener for storage changes
-    const handleStorageChange = (changes, area) => {
-      if (area === 'local' && changes.audioDataArray) {
-        updateState({ audioDataArray: changes.audioDataArray.newValue });
+    const fetchAudioData = async () => {
+        chrome.runtime.sendMessage({ action: 'getAudioDataArray' }, (response) => {
+            if (response && response.audioDataArray) {
+                updateState({ audioDataArray: response.audioDataArray });
+            }
+        });
+    };
+
+    fetchAudioData();
+
+    const messageListener = (message, sender, sendResponse) => {
+      if (message.action === 'audioUpdated') {
+        updateState({ audioDataArray: message.audioDataArray, loading: false });
       }
     };
 
-    chrome.storage.local.get(['audioDataArray'], function(result) {
-      if (result.audioDataArray) {
-        updateState({ audioDataArray: result.audioDataArray });
-      }
-    });
+    chrome.runtime.onMessage.addListener(messageListener);
+    fetchAudioData(); // Fetch initial audio data on component mount
 
-    chrome.storage.onChanged.addListener(handleStorageChange);
+
 
     return () => {
-      chrome.storage.onChanged.removeListener(handleStorageChange);
+      chrome.runtime.onMessage.removeListener(messageListener);
     };
   }, []);
 

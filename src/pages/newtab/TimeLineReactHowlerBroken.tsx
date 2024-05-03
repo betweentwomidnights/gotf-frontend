@@ -8,6 +8,7 @@ import { CloseIcon, ArrowForwardIcon, DownloadIcon, RepeatIcon, EditIcon, ArrowB
 import useStorage from '@src/shared/hooks/useStorage';
 import exampleThemeStorage from '@src/shared/storages/exampleThemeStorage';
 import { attachTwindStyle } from '@src/shared/style/twind';
+import ReactHowler from 'react-howler';
 
 declare module 'wavesurfer.js' {
     interface WaveSurfer {
@@ -39,6 +40,11 @@ const Timeline: React.FC<TimelineProps> = ({ initialAudioData }) => {
 
 
     const [isDebouncing, setIsDebouncing] = useState(false);
+
+    // New state to manage ReactHowler instances
+    const [audioPlayers, setAudioPlayers] = useState({});
+
+    
 
 
 // New useEffect hook for debugging
@@ -82,7 +88,10 @@ useEffect(() => {
     }, [initialAudioData]);
 
     useEffect(() => {
+        const newAudioPlayers = { ...audioPlayers };
+    
         timelineAudioData.forEach((audioData, index) => {
+            // Set up WaveSurfer instances
             if (!waveSurferRefs.current[index] && audioData.data) {
                 const waveformContainerId = `waveform-${audioData.taskId}`;
                 const wavesurfer = WaveSurfer.create({
@@ -100,28 +109,20 @@ useEffect(() => {
                 wavesurfer.load(`data:audio/wav;base64,${audioData.data}`);
                 waveSurferRefs.current[index] = wavesurfer;
                 waveSurferMap.current.set(audioData.taskId, wavesurfer);
+            }
     
-                if (!howlerRefs.current[index]) {
-                    const howler = new Howl({
-                        src: [`data:audio/wav;base64,${audioData.data}`],
-                        format: ['wav'],
-                        html5: true, // ensure HTML5 Audio is used
-                        onload: () => {
-                            console.log(`Howler loaded for index: ${index}`);
-                        },
-                        onplay: () => {
-                            console.log(`Howler play event triggered for index: ${index}`);
-                        },
-                        onend: () => {
-                            console.log(`Howler end event for index: ${index}`);
-                        }
-                    });
-                    howlerRefs.current[index] = howler;
-                    howlerMap.current.set(audioData.taskId, howler);
-                }
+            // Set up ReactHowler instances
+            if (!newAudioPlayers[audioData.taskId]) {
+                newAudioPlayers[audioData.taskId] = {
+                    src: `data:audio/wav;base64,${audioData.data}`,
+                    playing: false
+                };
             }
         });
+    
+        setAudioPlayers(newAudioPlayers);
     }, [timelineAudioData]);
+    
     
       
 
@@ -134,10 +135,12 @@ useEffect(() => {
             const wavesurfer = waveSurferRefs.current[currentPlayingIndex];
     
             const updateWaveSurfer = () => {
-                const currentTime = howler.seek(); // Get current time from Howler
-                const duration = howler.duration(); // Get total duration from Howler
-                const ratio = currentTime / duration; // Calculate the ratio
-                wavesurfer.seekTo(ratio); // Synchronize Wavesurfer cursor
+                if (howler.playing()) {
+                    const currentTime = howler.seek(); // Get current time from Howler
+                    const duration = howler.duration(); // Get total duration from Howler
+                    const ratio = currentTime / duration; // Calculate the ratio
+                    wavesurfer.seekTo(ratio); // Synchronize Wavesurfer cursor
+                }
             };
     
             intervalId = setInterval(updateWaveSurfer, 100); // Update every 100ms
@@ -150,69 +153,70 @@ useEffect(() => {
         };
     }, [currentPlayingIndex, isPlaying]);
 
-    const removeAudioPiece = (taskId: string) => {
-    // Update the state to filter out the removed audio piece
-    const updatedAudioData = timelineAudioData.filter(audio => audio.taskId !== taskId);
-    setTimelineAudioData(updatedAudioData);
-
-    // Find the index of the audio piece to remove
-    const index = timelineAudioData.findIndex(audio => audio.taskId === taskId);
-    if (index !== -1) {
-        // Destroy the WaveSurfer and unload the Howler instance
-        waveSurferRefs.current[index]?.destroy();
-        howlerRefs.current[index]?.unload();
-
-        // Remove the references from the refs arrays
-        waveSurferRefs.current.splice(index, 1);
-        howlerRefs.current.splice(index, 1);
-    }
-
-    // Update indexedDB in background script (if necessary)
-    chrome.runtime.sendMessage({
-        action: 'removeAudioData',
-        taskId: taskId
-    });
-};
-
-const onDragStart = () => {
-    // Pause all Howler and WaveSurfer instances
-    howlerRefs.current.forEach(howler => howler?.pause());
-    waveSurferRefs.current.forEach(wavesurfer => {
-        if (wavesurfer) {
-            wavesurfer.pause();
+    const removeAudioPiece = (taskId) => {
+        // Update timelineAudioData to remove the selected audio piece
+        const updatedAudioData = timelineAudioData.filter(audio => audio.taskId !== taskId);
+        setTimelineAudioData(updatedAudioData);
+    
+        // Destroy the WaveSurfer instance
+        const index = timelineAudioData.findIndex(audio => audio.taskId === taskId);
+        if (index !== -1) {
+            waveSurferRefs.current[index]?.destroy();
+            waveSurferRefs.current.splice(index, 1);
         }
-    });
-    setIsPlaying(false);
-};
+    
+        // Update audioPlayers state to remove the corresponding ReactHowler instance
+        const newAudioPlayers = { ...audioPlayers };
+        delete newAudioPlayers[taskId];
+        setAudioPlayers(newAudioPlayers);
+    
+        // Update indexedDB in background script (if necessary)
+        chrome.runtime.sendMessage({
+            action: 'removeAudioData',
+            taskId: taskId
+        });
+    };
+    
 
-const onDragEnd = (result) => {
-    if (!result.destination) return;
-  
-    // Pause currently playing audio if any
-    if (currentPlayingIndex !== null) {
-      howlerRefs.current[currentPlayingIndex]?.stop();
-      setCurrentPlayingIndex(null);
-      setIsPlaying(false);
-    }
-  
-    const reorderedData = reorder(
-      timelineAudioData,
-      result.source.index,
-      result.destination.index
-    );
-  
-    setTimelineAudioData(reorderedData);
-  
-    // Update WaveSurfer and Howler references based on new order
-    const newWaveSurferRefs = reorderedData.map(data => waveSurferMap.current.get(data.taskId));
-    const newHowlerRefs = reorderedData.map(data => howlerMap.current.get(data.taskId));
-  
-    // Replace the old refs with the newly ordered refs
-    waveSurferRefs.current = newWaveSurferRefs;
-    howlerRefs.current = newHowlerRefs;
-  
-    // Since we stopped all sounds, there's no need to update WaveSurfer cursors immediately
-  };
+    const onDragStart = () => {
+        // Pause all audio players using the audioPlayers state
+        const newAudioPlayers = { ...audioPlayers };
+        Object.keys(newAudioPlayers).forEach(taskId => {
+            newAudioPlayers[taskId].playing = false;
+        });
+        setAudioPlayers(newAudioPlayers);
+    
+        // Pause WaveSurfer instances
+        waveSurferRefs.current.forEach(wavesurfer => wavesurfer?.pause());
+        
+        setIsPlaying(false);
+    };
+
+    const onDragEnd = (result) => {
+        if (!result.destination) return;
+    
+        const reorderedData = reorder(
+            timelineAudioData,
+            result.source.index,
+            result.destination.index
+        );
+        setTimelineAudioData(reorderedData);
+    
+        // Reorder WaveSurfer references
+        waveSurferRefs.current = reorderedData.map(data =>
+            waveSurferMap.current.get(data.taskId)
+        );
+    
+        // Reorder ReactHowler instances in the audioPlayers state
+        const newAudioPlayers = {};
+        reorderedData.forEach(data => {
+            newAudioPlayers[data.taskId] = audioPlayers[data.taskId];
+        });
+        setAudioPlayers(newAudioPlayers);
+    
+        // Reset playing state
+        setIsPlaying(false);
+    };
 
     const reorder = (list: { taskId: string, data: string }[], startIndex: number, endIndex: number): { taskId: string, data: string }[] => {
         const result = Array.from(list);
@@ -221,83 +225,74 @@ const onDragEnd = (result) => {
         return result;
     };
 
-    let currentPlayPosition = 0; // Track the current play position
-
     const playAll = () => {
-        console.log(`playAll invoked, isPlaying: ${isPlaying}, currentPlayingIndex: ${currentPlayingIndex}`);
-    
         if (isPlaying) {
-            // If currently playing, pause the playback
-            if (currentPlayingIndex !== null) {
-                const howler = howlerRefs.current[currentPlayingIndex];
-                howler.pause(); // Pause the Howler instance, maintaining the current position
-                setIsPlaying(false);
-            }
-        } else {
-            // If not playing, start or resume playback
-            if (currentPlayingIndex !== null) {
-                // Resume playing the current Howler instance
-                const howler = howlerRefs.current[currentPlayingIndex];
-                howler.play();
-            } else {
-                // Start playing from the first audio
-                playNext(0);
-            }
-            setIsPlaying(true);
-        }
-    };
+            // Pause all audio players
+            const newAudioPlayers = { ...audioPlayers };
+            Object.keys(newAudioPlayers).forEach(taskId => {
+                newAudioPlayers[taskId].playing = false;
+            });
+            setAudioPlayers(newAudioPlayers);
     
-    const playNext = (currentIndex) => {
-        if (currentIndex < howlerRefs.current.length) {
-            stopAllHowlersExcept(currentIndex); // Stop all other sounds
-    
-            const howler = howlerRefs.current[currentIndex];
-            if (howler) {
-                setCurrentPlayingIndex(currentIndex);
-                howler.play();
-                howler.once('end', () => playNext(currentIndex + 1)); // Play next track after current ends
-            } else {
-                playNext(currentIndex + 1); // Skip to next if current Howler instance is undefined
-            }
-        } else {
             setIsPlaying(false);
-            setCurrentPlayingIndex(null); // Reset after all tracks have been played
-        }
-    };
+        } else {
+            let currentIndex = currentPlayingIndex !== null ? currentPlayingIndex : 0;
+            const playNext = () => {
+                if (currentIndex < timelineAudioData.length) {
+                    // Update audioPlayers state to play the current audio
+                    const newAudioPlayers = { ...audioPlayers };
+                    Object.keys(newAudioPlayers).forEach((taskId, index) => {
+                        newAudioPlayers[taskId].playing = index === currentIndex;
+                    });
+                    setAudioPlayers(newAudioPlayers);
     
-    const stopAllHowlersExcept = (currentIndex) => {
-        howlerRefs.current.forEach((howler, idx) => {
-            if (idx !== currentIndex && howler.playing()) {
-                howler.stop();
-            }
-        });
+                    setCurrentPlayingIndex(currentIndex);
+    
+                    // Set a timeout to simulate the 'end' event and play the next audio
+                    const duration = howlerRefs.current[currentIndex].duration();
+                    setTimeout(() => {
+                        currentIndex++;
+                        playNext();
+                    }, duration * 1000);
+                } else {
+                    setCurrentPlayingIndex(null);
+                    setIsPlaying(false);
+                }
+            };
+    
+            setIsPlaying(true);
+            playNext();
+        }
     };
     
 
 // Stop (or Refresh) Button Handler
 const stopPlayback = () => {
-    console.log(`Stop playback invoked, currentPlayingIndex: ${currentPlayingIndex}`);
-    howlerRefs.current.forEach((howler, idx) => {
-        howler.stop(); // Stop all Howler instances
-        console.log(`Stopping playback for index: ${idx}`);
-    });
+    if (currentPlayingIndex !== null) {
+        // Pause all audio players by updating the audioPlayers state
+        const newAudioPlayers = { ...audioPlayers };
+        Object.keys(newAudioPlayers).forEach(taskId => {
+            newAudioPlayers[taskId].playing = false;
+        });
+        setAudioPlayers(newAudioPlayers);
 
-    waveSurferRefs.current.forEach((wavesurfer, idx) => {
-        if (wavesurfer) {
-            wavesurfer.seekTo(0); // Reset the WaveSurfer cursor to the beginning
-            console.log(`Resetting WaveSurfer for index: ${idx}`);
-        }
-    });
+        // Reset all WaveSurfer instances
+        waveSurferRefs.current.forEach(wavesurfer => {
+            if (wavesurfer) {
+                wavesurfer.seekTo(0);
+            }
+        });
 
-    setCurrentPlayingIndex(null);
-    setIsPlaying(false);
+        setCurrentPlayingIndex(null); // Reset the playing index
+        setIsPlaying(false); // Update playing state
+    }
 };
 
 const exportToMP3 = async () => {
     const audioData = timelineAudioData.map(audio => audio.data); // Collect base64 audio data
 
     try {
-        const response = await fetch('https://6070-72-211-181-187.ngrok-free.app/combine-audio', {
+        const response = await fetch('http://34.125.129.105:3000/combine-audio', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ audioClips: audioData }),
@@ -352,12 +347,9 @@ const cropAudio = async (taskId: string) => {
         const audioData = timelineAudioData[index].data;
 
         try {
-            const response = await fetch('https://6070-72-211-181-187.ngrok-free.app/crop-audio', {
+            const response = await fetch('http://34.125.129.105:3000/crop-audio', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'ngrok-skip-browser-warning': 'true' // Include this header to bypass the ngrok warning
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ audioData, start: 0, end: currentTime }),
             });
 
@@ -366,22 +358,15 @@ const cropAudio = async (taskId: string) => {
             const croppedAudioBase64 = await response.text();
             const croppedAudioSrc = `data:audio/wav;base64,${croppedAudioBase64}`;
 
-            // Directly stop the Howler instance playing the audio being cropped
-            if (howlerRefs.current[index].playing()) {
-                howlerRefs.current[index].stop();
-            }
-
-            // Update WaveSurfer instance with cropped audio
+            // Update WaveSurfer instance
             waveSurferRefs.current[index].load(croppedAudioSrc);
 
-            // Update Howler instance with cropped audio for future playback
-            howlerRefs.current[index] = new Howl({
-                src: [croppedAudioSrc],
-                format: ['wav'],
-                html5: true
-            });
+            // Update Howler instance
+            const newHowler = new Howl({ src: [croppedAudioSrc], format: ['wav'] });
+            howlerRefs.current[index] = newHowler;
+            howlerMap.current.set(taskId, newHowler);
 
-            // Update timelineAudioData with cropped audio
+            // Update timelineAudioData
             const newTimelineAudioData = [...timelineAudioData];
             newTimelineAudioData[index].data = croppedAudioBase64;
             setTimelineAudioData(newTimelineAudioData);
@@ -392,14 +377,13 @@ const cropAudio = async (taskId: string) => {
                 taskId: taskId,
                 croppedAudioData: croppedAudioBase64
             });
-
-            // Set isPlaying to false to revert the pause button back to playAll
-            setIsPlaying(false);
-
+            
         } catch (error) {
             console.error('Error cropping audio:', error);
         } finally {
-            setIsDebouncing(false);
+            setTimeout(() => {
+                setIsDebouncing(false);
+            }, 1000);
         }
     } else {
         console.error('WaveSurfer instance not found for taskId:', taskId);
@@ -407,9 +391,8 @@ const cropAudio = async (taskId: string) => {
 };
 
 
-
 // Function to undo the crop operation
-const undoCrop = (taskId: string) => {
+const undoCrop = (taskId) => {
     if (isDebouncing) return;
     setIsDebouncing(true);
     chrome.runtime.sendMessage({ action: 'revertToOriginalAudio', taskId: taskId }, (response) => {
@@ -419,8 +402,11 @@ const undoCrop = (taskId: string) => {
 
             if (index !== -1) {
                 waveSurferRefs.current[index]?.load(`data:audio/wav;base64,${originalAudioData}`);
-                const newHowler = new Howl({ src: [`data:audio/wav;base64,${originalAudioData}`], format: ['wav'] });
-                howlerRefs.current[index] = newHowler;
+
+                // Update ReactHowler instance in the audioPlayers state
+                const newAudioPlayers = { ...audioPlayers };
+                newAudioPlayers[taskId] = { ...newAudioPlayers[taskId], src: `data:audio/wav;base64,${originalAudioData}` };
+                setAudioPlayers(newAudioPlayers);
 
                 const updatedTimelineAudioData = [...timelineAudioData];
                 updatedTimelineAudioData[index].data = originalAudioData;
@@ -433,13 +419,13 @@ const undoCrop = (taskId: string) => {
     }, 1000); // 1 second debounce period
 };
 
-const themeScrollbarClass = theme === 'light' ? 'light-theme-scrollbar' : 'dark-theme-scrollbar';
+
 
 return (
     <DragDropContext onDragEnd={onDragEnd} onDragStart={onDragStart}>
         <Droppable droppableId="droppable" direction="horizontal">
             {(provided) => (
-                <div {...provided.droppableProps} ref={provided.innerRef} className={`timeline-container ${theme === 'light' ? 'light-theme' : 'dark-theme'}`}>
+                <div {...provided.droppableProps} ref={provided.innerRef} className="timeline-container">
                     {timelineAudioData.map((audio, index) => (
                         <Draggable key={audio.taskId} draggableId={audio.taskId} index={index}>
                             {(provided) => (
@@ -452,37 +438,44 @@ return (
                                     {audioGenerationStatus[audio.taskId] === 'generating' ? (
                                         <Spinner size="xl" thickness="4px" speed="0.65s" color="red.500" />
                                     ) : (
-                                        <div id={`waveform-${audio.taskId}`} className="waveform">
-                                            <IconButton
-                                                aria-label="Remove audio"
-                                                icon={<CloseIcon />}
-                                                onClick={() => removeAudioPiece(audio.taskId)}
-                                                size="sm"
-                                                colorScheme="red"
-                                                variant="ghost"
-                                                position="relative"
-                                                top="2"
-                                                right="2"
+                                        <>
+                                            <ReactHowler
+                                                src={audioPlayers[audio.taskId]?.src}
+                                                playing={audioPlayers[audio.taskId]?.playing}
+                                                html5={true}
                                             />
-                                            <Button
-                                        onClick={() => cropAudio(audio.taskId)}
-                                        size="sm"
-                                        colorScheme="red"
-                                        variant="ghost"
-                                        isDisabled={isDebouncing}
-                                        >
-                                            crop
-                                            </Button>
-                                            <IconButton
-                                            aria-label="Undo crop"
-                                            icon={<ArrowBackIcon />}
-                                            onClick={() => undoCrop(audio.taskId)}
-                                            size="sm"
-                                            colorScheme="white"
-                                            variant="ghost"
-                                            isDisabled={isDebouncing}
-                                            />
-                                        </div>
+                                            <div id={`waveform-${audio.taskId}`} className="waveform">
+                                                <IconButton
+                                                    aria-label="Remove audio"
+                                                    icon={<CloseIcon />}
+                                                    onClick={() => removeAudioPiece(audio.taskId)}
+                                                    size="sm"
+                                                    colorScheme="red"
+                                                    variant="ghost"
+                                                    position="relative"
+                                                    top="2"
+                                                    right="2"
+                                                />
+                                                <Button
+                                                    onClick={() => cropAudio(audio.taskId)}
+                                                    size="sm"
+                                                    colorScheme="red"
+                                                    variant="ghost"
+                                                    isDisabled={isDebouncing}
+                                                >
+                                                    Crop
+                                                </Button>
+                                                <IconButton
+                                                    aria-label="Undo crop"
+                                                    icon={<ArrowBackIcon />}
+                                                    onClick={() => undoCrop(audio.taskId)}
+                                                    size="sm"
+                                                    colorScheme="white"
+                                                    variant="ghost"
+                                                    isDisabled={isDebouncing}
+                                                />
+                                            </div>
+                                        </>
                                     )}
                                 </div>
                             )}

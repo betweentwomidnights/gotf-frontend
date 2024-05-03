@@ -1,13 +1,60 @@
 /* Timeline.css */
 .timeline-container {
-    /* This will be your main container for the timeline */
     display: flex;
-    flex-direction: row; /* Explicitly set the direction to row */
-    align-items: start; /* Align the items to the start of the cross axis */
-    overflow-x: auto; /* Allows horizontal scrolling if the content overflows */
+    flex-direction: row;
+    align-items: start;
+    overflow-x: auto; /* Enables horizontal scrolling */
+    overflow-y: hidden; /* Prevents vertical scrolling within the container */
+    max-height: 200px; /* Set a maximum height to enable vertical scrolling within this container */
     padding: 10px;
-    gap: 10px; /* Adds some space between your waveforms */
+    gap: 10px;
+    width: 100%; /* Ensure the container takes full width of its parent */
+    
+    scrollbar-width: thin; /* scrollbar width */
 }
+
+/* Styles for the scrollbar for light and dark themes */
+.timeline-container.light-theme::-webkit-scrollbar-track {
+    background: #fff; /* White background for light theme */
+}
+
+.timeline-container.light-theme::-webkit-scrollbar-thumb {
+    background: #ff0000; /* Red scrollbar thumb for light theme */
+    border: 2px solid #000; /* Black border for thumb for light theme */
+}
+
+.timeline-container.dark-theme::-webkit-scrollbar-track {
+    background: #000; /* Black background for dark theme */
+}
+
+.timeline-container.dark-theme::-webkit-scrollbar-thumb {
+    background: #ff0000; /* Red scrollbar thumb for dark theme */
+    border: 2px solid #fff; /* White border for thumb for dark theme */
+}
+
+/* Firefox scrollbar styles */
+.timeline-container.light-theme {
+    scrollbar-color: #ff0000 #fff; /* thumb and track color for light theme */
+    scrollbar-width: thin;
+}
+
+.timeline-container.dark-theme {
+    scrollbar-color: #ff0000 #000; /* thumb and track color for dark theme */
+    scrollbar-width: thin;
+}
+
+/* Set a minimal height for the scrollbar thumb to ensure it's always easy to grab */
+.timeline-container::-webkit-scrollbar-thumb {
+    border-radius: 10px; /* Rounded corners for the scrollbar thumb */
+    min-height: 30px;
+}
+
+/* Set the width of the scrollbar */
+.timeline-container::-webkit-scrollbar {
+    width: 12px;
+}
+
+
 
 .waveform-container {
     /* Adjust the styling of each waveform container if necessary */
@@ -35,4 +82,35 @@
 .waveform {
     width: 100%;
     height: 100%; /* Full container height */
+}
+
+.loading-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 10px; /* Adjust as needed */
+    background-color: #f3f3f3; /* Light grey background */
+    border-radius: 8px;
+    margin: 10px 0;
+}
+
+.placeholder-waveform {
+    width: 90%;
+    height: 80px; /* Adjust as needed */
+    background-color: #ddd; /* Lighter grey to represent unloaded waveform */
+    border-radius: 4px;
+}
+
+.loading-spinner {
+    border: 4px solid #f3f3f3; /* Light grey */
+    border-top: 4px solid #3498db; /* Blue color */
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }

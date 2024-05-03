@@ -22,6 +22,7 @@
     font-size: calc(10px + 2vmin);
     color: white;
     width: 100%; /* Ensure the header takes full width */
+    position: relative;
 }
 
 .App-link {
@@ -40,42 +41,4 @@
 .audio-list-container {
     display: flex;
     justify-content: center; /* Center the child container */
-}
-
-.audio-list {
-    display: flex;
-    flex-direction: column;
-    padding: 10px;
-    overflow-x: hidden;
-    overflow-y: auto;
-    max-height: 180px; /* Adjust based on your design */
-    width: calc(100% - 12px); /* Assuming scrollbar width to be 12px */
-    margin-right: -12px; /* Offset the scrollbar width */
-    scrollbar-width: thin; /* For Firefox */
-    scrollbar-color: #888 #333; /* For Firefox */
-    direction: rtl;
-}
-
-    .audio-list::-webkit-scrollbar {
-        width: 12px;
-    }
-
-    .audio-list::-webkit-scrollbar-track {
-        background: #333;
-    }
-
-    .audio-list::-webkit-scrollbar-thumb {
-        background-color: #888;
-        border-radius: 6px;
-        border: 3px solid #333;
-    }
-
-.audio-item {
-    margin: 10px 0;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    width: 100%;
-    direction: ltr; /* Left-to-right direction for individual items */
-    position: center;
 }

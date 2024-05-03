@@ -1,13 +1,23 @@
 // utils/urlChecker.js
 
 /**
- * Check if the given URL is a YouTube or SoundCloud URL.
+ * Check if the given URL is a YouTube video URL and not part of a playlist.
  * @param {string} url The URL to check.
- * @returns {boolean} True if the URL is supported, false otherwise.
+ * @returns {boolean} True if the URL is an individual YouTube video, false otherwise.
  */
 export const isSupportedURL = (url) => {
-  const youtubeVideoRegex = /youtube\.com\/watch\?v=[\w-]+/;
-  const soundcloudTrackRegex = /soundcloud\.com\/[\w-]+\/[\w-]+/; // Adjust if there's a more specific pattern
+  try {
+    const urlObj = new URL(url);
+    const hostname = urlObj.hostname;
+    const videoID = urlObj.searchParams.get('v');
+    const isPlaylist = urlObj.searchParams.has('list');
 
-  return youtubeVideoRegex.test(url) || soundcloudTrackRegex.test(url);
+    // Check if it's a YouTube URL, has a video ID, and is not part of a playlist
+    return hostname.includes('youtube.com') && videoID && !isPlaylist;
+  } catch (e) {
+    // If URL parsing fails, return false
+    return false;
+  }
 };
+
+export default isSupportedURL;

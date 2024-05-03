@@ -1,27 +1,15 @@
-this is the github for a chrome browser extension temporarily called 'gary on the fly'
+things we need done for commuune:
 
-audiocraft continuations based on the youtube/soundcloud url the user is at when they click the 'generate music' button in the Popup window.
+if this is a module, i believe the front-end needs web3 magic for the user to auth/engage etc.
 
-big time work in progress.
+we need a web3 front-end guy.
 
-TODO: 
+kev just hallucinated the DAW together. the duplicate audio playback has been attacked 100 different ways. 
+The DAW needs a rewrite where we display waveforms ourselves using custom code instead of wavesurfer/howler
 
-fix the bug where the popup window loads previous waveforms into the newtab's timeline even if you have removed them. doesn't always happen.
+we likely need to fix some code to get multiple rq workers running for proper concurrency. 
 
-work on options tab for fine-tunes, params etc.
-
-clean up the state management even better.
-
-export-to-mp3 from the timeline.
-
-cursor synchronization on the wavesurfer instances.
-
-
-
-
-
-
-
+The module will benefit greatly from having a training module to go along with it. (we really need to train a model with DAC from scratch using an enormous dataset)
 
 
 

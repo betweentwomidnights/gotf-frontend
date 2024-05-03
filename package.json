@@ -1,11 +1,11 @@
 {
-  "name": "gary4chrome",
-  "version": "0.0.1",
+  "name": "gary-on-the-fly",
+  "version": "0.0.3",
   "description": "musicgen continuations browser extension",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Jonghakseo/chrome-extension-boilerplate-react-vite.git"
+    "url": "https://thecollabagepatch.com"
   },
   "scripts": {
     "build": "tsc --noEmit && vite build",
@@ -32,6 +32,7 @@
     "@heroicons/react": "1",
     "construct-style-sheets-polyfill": "3.1.0",
     "howler": "^2.2.4",
+    "idb": "^8.0.0",
     "interactjs": "^1.10.26",
     "nanoid": "^5.0.4",
     "react": "18.2.0",
@@ -39,6 +40,8 @@
     "react-dnd": "^16.0.1",
     "react-dnd-html5-backend": "^16.0.1",
     "react-dom": "18.2.0",
+    "react-howler": "^5.2.0",
+    "react-icons": "^5.0.0",
     "socket.io-client": "^4.7.2",
     "valtio": "^1.12.1",
     "wavesurfer.js": "^7.5.3",
@@ -56,6 +59,7 @@
     "@types/node": "20.8.10",
     "@types/react": "18.2.37",
     "@types/react-dom": "18.2.14",
+    "@types/wavesurfer.js": "^6.0.12",
     "@types/ws": "8.5.8",
     "@typescript-eslint/eslint-plugin": "6.10.0",
     "@typescript-eslint/parser": "6.9.1",

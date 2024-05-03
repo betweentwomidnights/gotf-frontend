@@ -8,6 +8,8 @@ import withSuspense from '@src/shared/hoc/withSuspense';
 import withErrorBoundary from '@src/shared/hoc/withErrorBoundary';
 import { Collapse } from "@chakra-ui/react";
 import Timeline from './Timeline';
+import SocialMediaButtonGroup from './SocialMediaButtonGroup';
+
 
 const Newtab = () => {
     const theme = useStorage(exampleThemeStorage);
@@ -15,61 +17,73 @@ const Newtab = () => {
     const [showOlderGenerations, setShowOlderGenerations] = useState(false);
 
     useEffect(() => {
-        chrome.storage.local.get(['audioDataArray'], (result) => {
-            if (result.audioDataArray) {
-                setAudioDataArray(result.audioDataArray);
+    const fetchAudioData = async () => {
+        chrome.runtime.sendMessage({ action: 'getAudioDataArray' }, (response) => {
+            if (response && response.audioDataArray) {
+                setAudioDataArray(response.audioDataArray);
             }
         });
+    };
 
+    fetchAudioData();
+}, []);
+
+    useEffect(() => {
         const messageListener = (message, sender, sendResponse) => {
-            if (message.action === 'audioUpdated') {
-                chrome.storage.local.get(['audioDataArray'], (result) => {
-                    if (result.audioDataArray) {
-                        setAudioDataArray(result.audioDataArray);
-                    }
-                });
+          console.log('Message received:', message); // Log the entire message for inspection
+          if (message.action === 'audioUpdated') {
+            if (!Array.isArray(message.audioDataArray)) {
+              console.error('Data received is not an array:', message.audioDataArray);
+              return;
             }
+            setAudioDataArray(message.audioDataArray);
+          }
         };
-
-        const storageChangeListener = (changes, namespace) => {
-            if (namespace === 'local' && changes.audioDataArray) {
-                setAudioDataArray(changes.audioDataArray.newValue);
-            }
-        };
-
-        chrome.storage.onChanged.addListener(storageChangeListener);
+      
         chrome.runtime.onMessage.addListener(messageListener);
-
+        chrome.runtime.sendMessage({ action: "getAudioDataArray" }); // Fetch audio data on component mount
+      
         return () => {
-            chrome.storage.onChanged.removeListener(storageChangeListener);
-            chrome.runtime.onMessage.removeListener(messageListener);
+          chrome.runtime.onMessage.removeListener(messageListener);
         };
-    }, []);
+      }, []);
+
+      useEffect(() => {
+        const intervalId = setInterval(() => {
+          chrome.runtime.sendMessage({ action: 'keepAlive' }, (response) => {
+            if (chrome.runtime.lastError) {
+              // Log the error if there's an issue with the keepAlive message
+              console.error('Error in keepAlive:', chrome.runtime.lastError);
+            }
+            // Removed the console.log to prevent cluttering the console with keepAlive responses
+          });
+        }, 10000);
+      
+        return () => clearInterval(intervalId);
+      }, []);
+
+      
 
     return (
         <div className="App" style={{ backgroundColor: theme === 'light' ? '#ffffff' : '#000000' }}>
+            <SocialMediaButtonGroup theme={theme} />
             <header className="App-header" style={{ color: theme === 'light' ? '#000' : '#fff' }}>
                 <img src={logo} className="App-logo" alt="logo" />
                 <p>
-                    Please navigate to a YouTube URL to use the Popup.
-                    Warning: Leave this newtab open during generation to receive the audio.
+                    go to a youtube url to use the popup..
+                    warning: leave this newtab open during generation. 
+
+                    
+                    
                 </p>
+                    refresh newtab page if playback breaks. warning: youll need to re-crop your waveforms.
+                <p>
+                    if the audio in playback gets way louder sometimes...dont worry. it wont affect export volume.
+                </p>
+
+                
                 <Timeline initialAudioData={audioDataArray} />
-                {audioDataArray.length > 0 && (
-                    <audio controls src={`data:audio/wav;base64,${audioDataArray[0].data}`}>
-                        <track kind="captions" />
-                    </audio>
-                )}
-                <button onClick={() => setShowOlderGenerations(!showOlderGenerations)}>
-                    {showOlderGenerations ? 'Hide' : 'Show'} older generations
-                </button>
-                <Collapse in={showOlderGenerations}>
-                    {audioDataArray.slice(1).map((audioData) => (
-                        <audio key={audioData.taskId} controls src={`data:audio/wav;base64,${audioData.data}`}>
-                            <track kind="captions" />
-                        </audio>
-                    ))}
-                </Collapse>
+                
                 <button
                     style={{ backgroundColor: theme === 'light' ? '#fff' : '#000', color: theme === 'light' ? '#000' : '#fff' }}
                     onClick={exampleThemeStorage.toggle}>

@@ -11,10 +11,9 @@ const manifest = {
   description: packageJson.description,
     permissions: [
         'storage',
-        'sidePanel',
-        'activeTab',  // Add this line
+        
         'tabs',
-        'scripting'
+        
     ],
   side_panel: {
     default_path: 'src/pages/sidepanel/index.html',
@@ -26,13 +25,13 @@ const manifest = {
   },
   action: {
     default_popup: 'src/pages/popup/index.html',
-    default_icon: 'icon-34.png',
+    default_icon: 'gotf-logo-tiny.png',
   },
   chrome_url_overrides: {
     newtab: 'src/pages/newtab/index.html',
   },
   icons: {
-    128: 'icon-128.png',
+    128: 'gotf-logo-tiny.png',
   },
   content_scripts: [
     {
